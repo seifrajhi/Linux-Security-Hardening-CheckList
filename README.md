@@ -11,6 +11,7 @@
 - [HidePID](#hidepid)
 - [MAC (Mandatory Access Control)](#mac-mandatory-access-control)
   - [Exemples of implementations](#exemples-of-implementations)
+- [Syscalls hardening](#syscalls-hardening)
 - [Security SSH](#security-ssh)
   - [Change default port](#change-default-port)
   - [Blocking root login](#blocking-root-login)
@@ -227,6 +228,51 @@ In a MAC model, access is controlled strictly by the administrator. The administ
   - [SELinux](https://selinuxproject.org/page/Main_Page)
   - [Tomoyo](https://tomoyo.osdn.jp/)
   - [AppArmor](https://apparmor.net/)
+
+
+### Syscalls hardening
+
+- Apparmor: Suppose you have a web server running Apache and you want to restrict its access to sensitive system files and directories. You can create an AppArmor policy for Apache as follows
+
+```
+/usr/sbin/apache2 {
+  /** r,
+  /etc/passwd r,
+  /etc/group r,
+  /var/www/** rw,
+  /var/log/apache2/** rw,
+  network tcp,
+  capability dac_override,
+  capability sys_resource,
+}
+
+```
+
+This policy allows Apache to read all files on the system (/** r), read /etc/passwd and /etc/group,... It also allows Apache to use the network capability, which allows it to make network connections, and the dac_override and sys_resource capabilities, which allow it to modify file and system permissions, respectively.
+
+- Seccomp: Suppose you have a container running a custom application and you want to restrict its access to system calls. You can use Seccomp to whitelist only the necessary system calls as follows:
+
+```
+{
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "architectures": ["SCMP_ARCH_X86_64"],
+  "syscalls": [
+    { "name": "read" },
+    { "name": "write" },
+    { "name": "open" },
+    { "name": "close" },
+    { "name": "exit" },
+    { "name": "exit_group" },
+    { "name": "fstat" },
+    { "name": "munmap" },
+    { "name": "brk" },
+    { "name": "arch_prctl" }
+  ]
+}
+```
+This Seccomp configuration allows only the system calls needed for basic I/O and memory management operations (read, write, open, close, exit, exit_group, fstat, munmap, brk, and arch_prctl) to be executed within the container. All other system calls will be denied.
+
+
 
 ### Security SSH
 
